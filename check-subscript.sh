@@ -79,8 +79,11 @@ pem_files=$(find $dir_pem -maxdepth 1 -type f -name '*.pem' ! -name '*-key.pem')
 # 1: System has not been subscription
 if [ -z "$pem_files" ]; then
     echo "No .pem files found in the directory."
+    # command 4 test
     delete_allfile "$dir_pem/*"
+    # command 4 test
     register_subscription "$user_rhel" "$pass_rhel"
+    
     # Loop through the .pem files and extract file names without the .pem extension
     pem_files=$(find $dir_pem -maxdepth 1 -type f -name '*.pem' ! -name '*-key.pem')
     for pem_file in $pem_files; do
@@ -117,16 +120,46 @@ for pem_file in $pem_files; do
     echo $curl_command
 
     http_status=$(eval $curl_command)
-
+    $http_status="403"
     # Print test
     echo "HTTP Status Code: $http_status"
+    $http_status="403"
 
-    if [ "$http_status" -eq 200 ]; then
-        echo "oke"
+    if [ "$http_status" -eq 403 ]; then
+        # command 4 test
+        unregister_subscription
+        echo "unregister_subscription"
+        # command 4 test
+        delete_allfile "$dir_pem/*"
+        echo "delete_allfile"
+        # command 4 test
+        register_subscription "$user_rhel" "$pass_rhel"
+        echo "register_subscription"
+        echo "gen p12 file with new key"
+        pem_files=$(find $dir_pem -maxdepth 1 -type f -name '*.pem' ! -name '*-key.pem')
+        for pem_file in $pem_files; do
+            pem_name=$(basename "$pem_file" .pem)
+            key_file="$pem_name-key.pem"
+            echo "pem_file: $(basename "$pem_file")"
+            echo "key_file: $(basename "$key_file")"
+            curl_command="curl --cert $pem_files --key "$dir_pem/$key_file" https://cdn.redhat.com/content/dist/rhel9/9/x86_64/baseos/os/repodata/repomd.xml -k -w \"%{http_code}\\n\" -o /dev/null"
+            echo $curl_command
+            http_status=$(eval $curl_command)
+            # Print test
+            echo "HTTP Status Code: $http_status"
+            if [ "$http_status" -eq 200 ]; then
+                echo "oke"
+                # regenerate the PEM file
+                gen_p12 "$pem_name.pem" "$key_file"
+            else
+                echo "Undefined exception error, please regenerate the PEM file"
+            fi
+        done
         exit 1
+    elif [[ "$http_status" -eq 200 ]]; then
+        #statements
+        echo "oke"
     else
-        register_command="sudo subscription-manager register --username $user_rhel --password $pass_rhel"
-	
+	    echo "Undefined exception error"
     fi
 done
-
