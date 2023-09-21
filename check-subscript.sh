@@ -120,10 +120,9 @@ for pem_file in $pem_files; do
     echo $curl_command
 
     http_status=$(eval $curl_command)
-    $http_status="403"
+    http_status="403"
     # Print test
     echo "HTTP Status Code: $http_status"
-    $http_status="403"
 
     if [ "$http_status" -eq 403 ]; then
         # command 4 test
